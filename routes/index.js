@@ -17,10 +17,12 @@ export default function routes(app, addon) {
         
         
         res.render(
-          'hello-world.hbs', // change this to 'hello-world.jsx' to use the Atlaskit & React version
+          'onlyoffice-editor.hbs', // change this to 'hello-world.jsx' to use the Atlaskit & React version
           {
             title: 'Atlassian Connect', 
             editorConfig: JSON.stringify({
+              width: '100%',
+              height: '100%',
               type: 'desktop',
               documentType: 'word',
               document: {

@@ -1,0 +1,9 @@
+{{!< layout}}
+<div id="placeholder"></div>
+<script> 
+  $(document).ready(function() {
+    const jsonEditorConfig = JSON.parse(`{{{editorConfig}}}`);
+
+    var DocEditor = new DocsAPI.DocEditor("placeholder", jsonEditorConfig);
+  });
+</script>
