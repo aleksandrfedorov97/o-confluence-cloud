@@ -1,3 +1,9 @@
+const axios = require("axios");
+const FormData = require("form-data");
+
+const documentHelper = require("../helpers/documentHelper.js");
+const urlHelper = require("../helpers/urlHelper.js");
+
 export default function routes(app, addon) {
     // Redirect root path to /atlassian-connect.json,
     // which will be served by atlassian-connect-express.
@@ -5,72 +11,115 @@ export default function routes(app, addon) {
         res.redirect('/atlassian-connect.json');
     });
 
-    
-
-    // This is an example route used by "generalPages" module (see atlassian-connect.json).
-    // Verify that the incoming request is authenticated with Atlassian Connect.
     app.get('/onlyoffice-editor', addon.authenticate(), (req, res) => {
-        // Rendering a template is easy; the render method takes two params: the name of the component or template file, and its props.
-        // Handlebars and jsx are both supported, but please note that jsx changes require `npm run watch-jsx` in order to be picked up by the server.
-        const clientKey = req.context.clientKey;
-        console.log(req.context);
-        
-        
+
+      var httpClient = addon.httpClient(req);
+
+      var editorConfig = {};
+
+      httpClient.get({
+        url: `/rest/api/content/${req.query.pageId}/child/attachment`
+      }, function(err, response, body) {
+        var dataAttachments = JSON.parse(body);
+
+        for(var i in dataAttachments.results) {
+          if (dataAttachments.results[i].id == "att" + req.query.attachmentId) {
+            var fileName = dataAttachments.results[i].title;
+            var key = dataAttachments.results[i].id;
+            var url = urlHelper.getFileUrl(req);
+            var callbackUrl = urlHelper.getCallbackUrl(req);
+
+            editorConfig = documentHelper.getEditorConfig(fileName, null, url, callbackUrl);
+            console.log(editorConfig);
+          }
+        }
+
         res.render(
-          'onlyoffice-editor.hbs', // change this to 'hello-world.jsx' to use the Atlaskit & React version
+          'onlyoffice-editor.hbs',
           {
-            title: 'Atlassian Connect', 
-            editorConfig: JSON.stringify({
-              width: '100%',
-              height: '100%',
-              type: 'desktop',
-              documentType: 'word',
-              document: {
-                title: 'sample.docx',
-                url: req.context.localBaseUrl + 'onlyoffice-download?clientKey=' + req.context.clientKey,
-                fileType: 'docx'
-              }
-            })
-            //, browserOnly: true // you can set this to disable server-side rendering for react views
+            title: "ONLYOFFICE", 
+            editorConfig: JSON.stringify(editorConfig)
           }
         );
+      });
     });
 
     app.get('/onlyoffice-download', (req, res) => {
 
-      console.log("111111");
-      console.log(req.query.clientKey);
       var httpClient = addon.httpClient({
-        clientKey: req.query.clientKey  
+        clientKey: req.query.clientKey
       });
-
-      console.log(httpClient);
 
       httpClient.get({
-        url: '/rest/api/content/229379/child/attachment/9371650/download'
+        url: `/rest/api/content/${req.query.pageId}/child/attachment/${req.query.attachmentId}/download`
       }, function(err, response, body) {
         res.statusCode = 302;		
-        res.setHeader("location", "https://" + response.client._host + response.req.path);
+        res.setHeader("location", response.request.uri.href);
         res.send(body);
-      });
-   
-        // httpClient.get({
-        //     url: '/rest/api/content/229379/child/attachment/9371650/download'
-        // }, function(err, response, body){
-        //   // res.statusCode = 302;		
-				//   // res.setHeader("location", response.request.uri.href);
-        //   // res.send(body);
 
-        //   // var Readable = require('stream').Readable
-        //   // var s = new Readable();
-        //   // s.push(body);    
-        //   // s.push(null); 
-        //   // res.setHeader("Content-Length", 11435);
-        //   // res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-        //   // res.setHeader("Content-Disposition", "attachment; filename*=UTF-8\'\'" + "sample.docx");
-        //   // s.pipe(res);
-        // });
+        // var Readable = require('stream').Readable
+        // var s = new Readable();
+        // s.push(body);    
+        // s.push(null); 
+        // res.setHeader("Content-Length", 11435);
+        // res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        // res.setHeader("Content-Disposition", "attachment; filename*=UTF-8\'\'" + "sample.docx");
+        // s.pipe(res);
+      });
     });
 
-    // Add additional route handlers here...
+    app.post('/onlyoffice-callback', async (req, res) => {
+
+      let body = req.body;
+
+      if (body.status == 1) {
+
+      } else if (body.status == 2 || body.status == 3) { // MustSave, Corrupted
+
+          let file = await getFileData(body.url);
+
+          //console.log(file);
+      
+          const formData = new FormData();
+      
+          formData.append("file", file.data);
+          formData.append("minorEdit", "true");
+          
+
+          var httpClient = addon.httpClient({
+            clientKey: req.query.clientKey
+          });
+    
+          httpClient.post({
+            headers: {
+              "X-Atlassian-Token": "no-check",
+              "Accept": "application/json"
+            },
+            multipartFormData: {
+              file: [file.data]
+            },
+            url: `/rest/api/content/${req.query.pageId}/child/attachment/att${req.query.attachmentId}/data`
+          }, function(err, response, body) {
+            console.log(response);
+          });
+        
+      } else if (body.status == 6 || body.status == 7) { // MustForceSave, CorruptedForceSave
+
+      }
+
+      res.json({ error: 0 });
+    });
+
+    async function getFileData(url) {
+      const file = await axios({
+        method: "get",
+        responseType: "arraybuffer",
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        url: url,
+      });
+      
+      return file;
+    }
 }

@@ -10,7 +10,8 @@
         "installed": "/installed"
     },
     "scopes": [
-        "READ"
+        "READ",
+        "WRITE"
     ],
     "apiMigrations":{
         "signed-install": true
@@ -22,8 +23,7 @@
                 "name": {
                     "value": "ONLYOFFICE Editor"
                 },
-                "url": "/onlyoffice-editor?attachmentId={attachment.id}"
-                
+                "url": "/onlyoffice-editor?pageId={page.id}&attachmentId={attachment.id}"
             }
         ],
         "webItems": [
