@@ -59,10 +59,20 @@ documentHelper.getDocumentType = function (extension) {
     return SUPPORTED_FORMATS[extension]["type"];
 }
 
-documentHelper.getEditorConfig = function (clientKey, localBaseUrl, attachmentInfo, userInfo) {
+documentHelper.isEditable = function (extension) {
+    return SUPPORTED_FORMATS[extension]["edit"] === true;
+}
+
+documentHelper.getEditorConfig = function (clientKey, localBaseUrl, attachmentInfo, userInfo, permissionEdit) {
 
     let fileType = documentHelper.getFileExtension(attachmentInfo.title);
-    let callbackUrl = urlHelper.getCallbackUrl(localBaseUrl, clientKey, attachmentInfo.container.id, attachmentInfo.id);
+    let mode = "view";
+    let callbackUrl = null;
+
+    if (permissionEdit && documentHelper.isEditable(fileType)) {
+        mode = "edit";
+        callbackUrl = urlHelper.getCallbackUrl(localBaseUrl, clientKey, attachmentInfo.container.id, attachmentInfo.id);
+    }
 
     return {
         type: "desktop",
@@ -79,12 +89,12 @@ documentHelper.getEditorConfig = function (clientKey, localBaseUrl, attachmentIn
                 uploaded: attachmentInfo.history.createdDate
             },
             permissions: {
-                edit: true,
+                edit: permissionEdit,
             }
         },
         editorConfig: {
             callbackUrl: callbackUrl,
-            mode: "edit",
+            mode: mode,
             lang: "en",
             user: {
                 id: userInfo.accountId,

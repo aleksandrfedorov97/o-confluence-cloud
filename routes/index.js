@@ -34,8 +34,9 @@ export default function routes(app, addon) {
 
         let userInfo = await getUserInfo(httpClient, userAccountId);
         let attachmentInfo = await getAttachmentInfo(httpClient, pageId, attachmentId);
+        let permissionEdit = await checkPermissions(httpClient, userAccountId, attachmentId, "update");
 
-        var editorConfig = documentHelper.getEditorConfig(clientKey, localBaseUrl, attachmentInfo, userInfo);
+        var editorConfig = documentHelper.getEditorConfig(clientKey, localBaseUrl, attachmentInfo, userInfo, permissionEdit);
 
         res.render(
           'onlyoffice-editor.hbs',
