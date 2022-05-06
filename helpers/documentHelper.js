@@ -1,3 +1,5 @@
+const urlHelper = require("./urlHelper.js");
+
 var documentHelper = {};
 
 const SUPPORTED_FORMATS = {
@@ -57,21 +59,21 @@ documentHelper.getDocumentType = function (extension) {
     return SUPPORTED_FORMATS[extension]["type"];
 }
 
-documentHelper.getEditorConfig = function (fileName, key, url, callbackUrl) {
-    
-    var fileType = documentHelper.getFileExtension(fileName);
-    var documentType = documentHelper.getDocumentType(fileType);
+documentHelper.getEditorConfig = function (clientKey, localBaseUrl, attachmentInfo, userInfo) {
+
+    let fileType = documentHelper.getFileExtension(attachmentInfo.title);
+    let callbackUrl = urlHelper.getCallbackUrl(localBaseUrl, clientKey, attachmentInfo.container.id, attachmentInfo.id);
 
     return {
         type: "desktop",
         width: "100%",
         height: "100%",
-        documentType: documentType,
+        documentType: documentHelper.getDocumentType(fileType),
         document: {
-            title: fileName,
-            url: url,
+            title: attachmentInfo.title,
+            url: urlHelper.getFileUrl(localBaseUrl, clientKey, attachmentInfo.container.id, attachmentInfo.id),
             fileType: fileType,
-            key: key,
+            key: null,
             info: {
                 owner: "",
                 uploaded: ""
@@ -85,8 +87,8 @@ documentHelper.getEditorConfig = function (fileName, key, url, callbackUrl) {
             mode: "edit",
             lang: "en",
             user: {
-                id: null,
-                name: null
+                id: userInfo.accountId,
+                name: userInfo.displayName
             },
         }
     };

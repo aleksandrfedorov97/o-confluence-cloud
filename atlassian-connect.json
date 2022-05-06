@@ -11,7 +11,8 @@
     },
     "scopes": [
         "READ",
-        "WRITE"
+        "WRITE",
+        "ACT_AS_USER"
     ],
     "apiMigrations":{
         "signed-install": true

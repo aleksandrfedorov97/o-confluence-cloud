@@ -1,18 +1,18 @@
 var urlHelper = {};
 
-urlHelper.getFileUrl = function (request) {
-    var url = request.context.localBaseUrl + "onlyoffice-download";
-    url = url + "?clientKey=" + request.context.clientKey;
-    url = url + "&pageId=" + request.query.pageId;
-    url = url + "&attachmentId=" + request.query.attachmentId;
+urlHelper.getFileUrl = function (localBaseUrl, clientKey, pageId, attachmentId) {
+    var url = localBaseUrl + "onlyoffice-download";
+    url = url + "?clientKey=" + clientKey;
+    url = url + "&pageId=" + pageId;
+    url = url + "&attachmentId=" + attachmentId;
     return url;
 }
 
-urlHelper.getCallbackUrl = function (request) {
-    var url = request.context.localBaseUrl + "onlyoffice-callback";
-    url = url + "?clientKey=" + request.context.clientKey;
-    url = url + "&pageId=" + request.query.pageId;
-    url = url + "&attachmentId=" + request.query.attachmentId;
+urlHelper.getCallbackUrl = function (localBaseUrl, clientKey, pageId, attachmentId) {
+    var url = localBaseUrl + "onlyoffice-callback";
+    url = url + "?clientKey=" + clientKey;
+    url = url + "&pageId=" + pageId;
+    url = url + "&attachmentId=" + attachmentId;
     return url;
 }
 

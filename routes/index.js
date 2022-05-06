@@ -1,8 +1,14 @@
 const axios = require("axios");
-const FormData = require("form-data");
 
 const documentHelper = require("../helpers/documentHelper.js");
 const urlHelper = require("../helpers/urlHelper.js");
+
+const {
+    getAttachmentInfo,
+    getUserInfo,
+    checkPermissions,
+    updateContent
+} = require("../helpers/requestHelper.js");
 
 export default function routes(app, addon) {
     // Redirect root path to /atlassian-connect.json,
@@ -11,28 +17,25 @@ export default function routes(app, addon) {
         res.redirect('/atlassian-connect.json');
     });
 
-    app.get('/onlyoffice-editor', addon.authenticate(), (req, res) => {
+    app.get('/onlyoffice-editor', addon.authenticate(), async (req, res) => {
 
-      var httpClient = addon.httpClient(req);
+        var httpClient = addon.httpClient(req);
+        const userAccountId = req.context.userAccountId;
+        const localBaseUrl = req.context.localBaseUrl;
+        const clientKey = req.context.clientKey
+        const pageId = req.query.pageId;
+        const attachmentId = req.query.attachmentId;
 
-      var editorConfig = {};
-
-      httpClient.get({
-        url: `/rest/api/content/${req.query.pageId}/child/attachment`
-      }, function(err, response, body) {
-        var dataAttachments = JSON.parse(body);
-
-        for(var i in dataAttachments.results) {
-          if (dataAttachments.results[i].id == "att" + req.query.attachmentId) {
-            var fileName = dataAttachments.results[i].title;
-            var key = dataAttachments.results[i].id;
-            var url = urlHelper.getFileUrl(req);
-            var callbackUrl = urlHelper.getCallbackUrl(req);
-
-            editorConfig = documentHelper.getEditorConfig(fileName, null, url, callbackUrl);
-            console.log(editorConfig);
-          }
+        let canRead = await checkPermissions(httpClient, userAccountId, attachmentId, "read");
+        if (!canRead) {
+            res.status(403).send("Forbidden: you don't have access to this content");
+            return;
         }
+
+        let userInfo = await getUserInfo(httpClient, userAccountId);
+        let attachmentInfo = await getAttachmentInfo(httpClient, pageId, attachmentId);
+
+        var editorConfig = documentHelper.getEditorConfig(clientKey, localBaseUrl, attachmentInfo, userInfo);
 
         res.render(
           'onlyoffice-editor.hbs',
@@ -41,7 +44,6 @@ export default function routes(app, addon) {
             editorConfig: JSON.stringify(editorConfig)
           }
         );
-      });
     });
 
     app.get('/onlyoffice-download', (req, res) => {
