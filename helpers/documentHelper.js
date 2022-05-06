@@ -75,8 +75,8 @@ documentHelper.getEditorConfig = function (clientKey, localBaseUrl, attachmentIn
             fileType: fileType,
             key: null,
             info: {
-                owner: "",
-                uploaded: ""
+                owner: attachmentInfo.history.createdBy.displayName,
+                uploaded: attachmentInfo.history.createdDate
             },
             permissions: {
                 edit: true,
