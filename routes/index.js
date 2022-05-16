@@ -1,7 +1,5 @@
 const axios = require("axios");
-
 const documentHelper = require("../helpers/documentHelper.js");
-const urlHelper = require("../helpers/urlHelper.js");
 
 const {
     getAttachmentInfo,
@@ -27,6 +25,10 @@ export default function routes(app, addon) {
         const pageId = req.query.pageId;
         const attachmentId = req.query.attachmentId;
 
+        let context = {
+            title: "ONLYOFFICE"
+        };
+
         try {
             const canRead = await checkPermissions(httpClient, userAccountId, attachmentId, "read");
             if (!canRead) {
@@ -36,21 +38,27 @@ export default function routes(app, addon) {
 
             const userInfo = await getUserInfo(httpClient, userAccountId);
             const attachmentInfo = await getAttachmentInfo(httpClient, pageId, attachmentId);
-            const permissionEdit = await checkPermissions(httpClient, userAccountId, attachmentId, "update");
 
-            var editorConfig = documentHelper.getEditorConfig(clientKey, localBaseUrl, attachmentInfo, userInfo, permissionEdit);
+            const fileType = documentHelper.getFileExtension(attachmentInfo.title);
+            const documentType = documentHelper.getDocumentType(fileType);
 
-            res.render(
-                'onlyoffice-editor.hbs',
-                {
-                    title: "ONLYOFFICE", 
-                    editorConfig: JSON.stringify(editorConfig)
-                }
-            );
+            if (!documentType) {
+                context.error = `Sorry, this file format is not supported (${fileType})`;
+            } else {
+                const permissionEdit = await checkPermissions(httpClient, userAccountId, attachmentId, "update");
+                const editorConfig = documentHelper.getEditorConfig(clientKey, localBaseUrl, attachmentInfo, userInfo, permissionEdit);
+
+                context.editorConfig = JSON.stringify(editorConfig);
+            }
         } catch (error) {
             console.log(error);
             res.status(500).send("Internal error"); // ToDo: error
         }
+
+        res.render(
+            'onlyoffice-editor.hbs',
+            context
+        );
     });
 
     app.get('/onlyoffice-download', (req, res) => {
