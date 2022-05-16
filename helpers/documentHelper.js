@@ -56,11 +56,15 @@ documentHelper.getFileExtension = function (fileName) {
 }
 
 documentHelper.getDocumentType = function (extension) {
-    return SUPPORTED_FORMATS[extension]["type"];
+    if (SUPPORTED_FORMATS[extension] !== undefined) {
+        return SUPPORTED_FORMATS[extension]["type"];
+    }
+
+    return null;
 }
 
 documentHelper.isEditable = function (extension) {
-    return SUPPORTED_FORMATS[extension]["edit"] === true;
+    return SUPPORTED_FORMATS[extension] !== undefined && SUPPORTED_FORMATS[extension]["edit"] === true;
 }
 
 documentHelper.getEditorConfig = function (clientKey, localBaseUrl, attachmentInfo, userInfo, permissionEdit) {
