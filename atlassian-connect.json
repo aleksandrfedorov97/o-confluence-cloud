@@ -28,14 +28,47 @@
             }
         ],
         "webItems": [
-            {   
-                "key": "web-item-onlyoffice-editor",
+            {
+                "key": "web-item-onlyoffice-edit",
                 "name": {
                     "value": "Edit in ONLYOFFICE"
                 },
                 "url": "onlyoffice-editor",
                 "location": "system.attachment",
                 "context": "page",
+                "conditions": [
+                    {
+                        "condition": "has_attachment_permission",
+                        "params": {
+                            "permission": "EDIT"
+                        }
+                    }
+                ],
+                "weight": 9
+            },
+            {
+                "key": "web-item-onlyoffice-view",
+                "name": {
+                    "value": "View in ONLYOFFICE"
+                },
+                "url": "onlyoffice-editor",
+                "location": "system.attachment",
+                "context": "page",
+                "conditions": [
+                    {
+                        "condition": "has_attachment_permission",
+                        "params": {
+                            "permission": "VIEW"
+                        }
+                    },
+                    {
+                        "condition": "has_attachment_permission",
+                        "invert": true,
+                        "params": {
+                            "permission": "EDIT"
+                        }
+                    }
+                ],
                 "weight": 10
             }
         ]
