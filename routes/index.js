@@ -7,7 +7,8 @@ const {
     getAttachmentInfo,
     getUserInfo,
     checkPermissions,
-    updateContent
+    updateContent,
+    getFileDataFromUrl
 } = require("../helpers/requestHelper.js");
 
 export default function routes(app, addon) {
@@ -19,32 +20,37 @@ export default function routes(app, addon) {
 
     app.get('/onlyoffice-editor', addon.authenticate(), async (req, res) => {
 
-        var httpClient = addon.httpClient(req);
+        const httpClient = addon.httpClient(req);
         const userAccountId = req.context.userAccountId;
         const localBaseUrl = req.context.localBaseUrl;
         const clientKey = req.context.clientKey
         const pageId = req.query.pageId;
         const attachmentId = req.query.attachmentId;
 
-        let canRead = await checkPermissions(httpClient, userAccountId, attachmentId, "read");
-        if (!canRead) {
-            res.status(403).send("Forbidden: you don't have access to this content");
-            return;
+        try {
+            const canRead = await checkPermissions(httpClient, userAccountId, attachmentId, "read");
+            if (!canRead) {
+                res.status(403).send("Forbidden: you don't have access to this content");
+                return;
+            }
+
+            const userInfo = await getUserInfo(httpClient, userAccountId);
+            const attachmentInfo = await getAttachmentInfo(httpClient, pageId, attachmentId);
+            const permissionEdit = await checkPermissions(httpClient, userAccountId, attachmentId, "update");
+
+            var editorConfig = documentHelper.getEditorConfig(clientKey, localBaseUrl, attachmentInfo, userInfo, permissionEdit);
+
+            res.render(
+                'onlyoffice-editor.hbs',
+                {
+                    title: "ONLYOFFICE", 
+                    editorConfig: JSON.stringify(editorConfig)
+                }
+            );
+        } catch (error) {
+            console.log(error);
+            res.status(500).send("Internal error"); // ToDo: error
         }
-
-        let userInfo = await getUserInfo(httpClient, userAccountId);
-        let attachmentInfo = await getAttachmentInfo(httpClient, pageId, attachmentId);
-        let permissionEdit = await checkPermissions(httpClient, userAccountId, attachmentId, "update");
-
-        var editorConfig = documentHelper.getEditorConfig(clientKey, localBaseUrl, attachmentInfo, userInfo, permissionEdit);
-
-        res.render(
-          'onlyoffice-editor.hbs',
-          {
-            title: "ONLYOFFICE", 
-            editorConfig: JSON.stringify(editorConfig)
-          }
-        );
     });
 
     app.get('/onlyoffice-download', (req, res) => {
@@ -73,56 +79,26 @@ export default function routes(app, addon) {
 
     app.post('/onlyoffice-callback', async (req, res) => {
 
-      let body = req.body;
+        const body = req.body;
 
-      if (body.status == 1) {
+        if (body.status == 1) {
 
-      } else if (body.status == 2 || body.status == 3) { // MustSave, Corrupted
-
-          let file = await getFileData(body.url);
-
-          //console.log(file);
-      
-          const formData = new FormData();
-      
-          formData.append("file", file.data);
-          formData.append("minorEdit", "true");
-          
-
-          var httpClient = addon.httpClient({
-            clientKey: req.query.clientKey
-          });
-    
-          httpClient.post({
-            headers: {
-              "X-Atlassian-Token": "no-check",
-              "Accept": "application/json"
-            },
-            multipartFormData: {
-              file: [file.data]
-            },
-            url: `/rest/api/content/${req.query.pageId}/child/attachment/att${req.query.attachmentId}/data`
-          }, function(err, response, body) {
-            console.log(response);
-          });
+        } else if (body.status == 2 || body.status == 3) { // MustSave, Corrupted
+            const httpClient = addon.httpClient({
+                clientKey: req.query.clientKey
+            });
+            
+            const userAccountId = body.actions[0].userid;
+            const pageId = req.query.pageId;
+            const attachmentId = req.query.attachmentId;
+                
+            const fileData = await getFileDataFromUrl(body.url);
+            const error = await updateContent(httpClient, userAccountId, pageId, attachmentId, fileData);
         
-      } else if (body.status == 6 || body.status == 7) { // MustForceSave, CorruptedForceSave
+        } else if (body.status == 6 || body.status == 7) { // MustForceSave, CorruptedForceSave
 
-      }
+        }
 
-      res.json({ error: 0 });
+        res.json({ error: 0 });
     });
-
-    async function getFileData(url) {
-      const file = await axios({
-        method: "get",
-        responseType: "arraybuffer",
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        url: url,
-      });
-      
-      return file;
-    }
 }

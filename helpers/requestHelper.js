@@ -21,7 +21,7 @@ function getAttachmentInfo(httpClient, pageId, attachmentId) {
                 }
             }
 
-            resolve(null);
+            resolve(null); //ToDo: check not null
         });
     });
 }
@@ -78,13 +78,43 @@ function checkPermissions(httpClient, accountId, contentId, operation) {
     });
 }
 
-function updateContent() {
+function updateContent(httpClient, userAccountId, pageId, attachmentId, fileData) {
+    return new Promise((resolve, reject) => {
+        httpClient.asUserByAccountId(userAccountId).post({
+            headers: {
+                "X-Atlassian-Token": "no-check",
+                "Accept": "application/json"
+            },
+            multipartFormData: {
+                file: [fileData],
+            },
+            url: `/rest/api/content/${pageId}/child/attachment/${attachmentId}/data`
+        }, function(err, response, body) {
+            if (err) {
+                reject(err);
+                return;
+            }
+        });
+    });
+}
 
+async function getFileDataFromUrl(url) {
+    const file = await axios({
+        method: "get",
+        responseType: "arraybuffer",
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        url: url,
+    });
+
+    return file.data; //ToDo : check exception
 }
 
 module.exports = {
     getAttachmentInfo,
     getUserInfo,
     checkPermissions,
-    updateContent
+    updateContent,
+    getFileDataFromUrl
 };
