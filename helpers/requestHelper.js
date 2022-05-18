@@ -1,3 +1,37 @@
+function getAppProperty(httpClient, propertyKey) {
+    return new Promise((resolve, reject) => {
+        httpClient.get({
+            url: `/rest/atlassian-connect/1/addons/onlyoffice-confluence-cloud/properties/${propertyKey}`,
+            json: true
+        }, function(err, response, body) {
+            if (err) {
+                reject(err);
+                return;
+            }
+
+            if (body.value === undefined || body.value == "") {
+                resolve(null);
+            }
+
+            resolve(body.value);
+        });
+    });
+}
+
+function setAppProperty(httpClient, propertyKey, value) {
+    return new Promise((resolve, reject) => {
+        httpClient.put({
+            url: `/rest/atlassian-connect/1/addons/onlyoffice-confluence-cloud/properties/${propertyKey}`,
+            json: value
+        }, function(err, response, body) {
+            if (err) {
+                reject(err);
+                return;
+            }
+        });
+    });
+}
+
 function getAttachmentInfo(httpClient, pageId, attachmentId) {
     return new Promise((resolve, reject) => {
         // make sure the content ID is valid to prevent traversal
@@ -112,6 +146,8 @@ async function getFileDataFromUrl(url) {
 }
 
 module.exports = {
+    getAppProperty,
+    setAppProperty,
     getAttachmentInfo,
     getUserInfo,
     checkPermissions,

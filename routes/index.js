@@ -1,7 +1,10 @@
 const axios = require("axios");
 const documentHelper = require("../helpers/documentHelper.js");
+const urlHelper = require("../helpers/urlHelper.js");
 
 const {
+    getAppProperty,
+    setAppProperty,
     getAttachmentInfo,
     getUserInfo,
     checkPermissions,
@@ -9,11 +12,51 @@ const {
     getFileDataFromUrl
 } = require("../helpers/requestHelper.js");
 
+const {
+    getJwtSecret,
+    getJwtHeader
+} = require("../helpers/jwtManager.js");
+
 export default function routes(app, addon) {
     // Redirect root path to /atlassian-connect.json,
     // which will be served by atlassian-connect-express.
     app.get('/', (req, res) => {
         res.redirect('/atlassian-connect.json');
+    });
+
+    app.get('/configure', [addon.authenticate(), addon.authorizeConfluence({ application: ["administer"] })], async (req, res) => {
+        const httpClient = addon.httpClient(req);
+
+        const context = {
+            title: "ONLYOFFICE",
+            docApiUrl: await urlHelper.getDocApiUrl(addon, httpClient),
+            jwtSecret: await getJwtSecret(addon, httpClient),
+            jwtHeader: await getJwtHeader(addon, httpClient)
+        };
+
+        res.render(
+            'configure.hbs',
+            context
+        );
+    });
+
+    app.post('/configure', [addon.authenticate(true), addon.authorizeConfluence({ application: ["administer"] })], async (req, res) => {
+        const httpClient = addon.httpClient(req);
+
+        if (!req.body.docApiUrl || !req.body.jwtSecret || !req.body.jwtSecret) {
+            res.status(400).send();
+            return;
+        }
+
+        try {
+            setAppProperty(httpClient, "docApiUrl", req.body.docApiUrl);
+            setAppProperty(httpClient, "jwtSecret", req.body.jwtSecret);
+            setAppProperty(httpClient, "jwtHeader", req.body.jwtHeader);
+        } catch (error) {
+            res.status(500).send("Internal error");
+        }
+
+        res.status(200).send();
     });
 
     app.get('/onlyoffice-editor', addon.authenticate(), async (req, res) => {
@@ -26,7 +69,8 @@ export default function routes(app, addon) {
         const attachmentId = req.query.attachmentId;
 
         let context = {
-            title: "ONLYOFFICE"
+            title: "ONLYOFFICE",
+            docApiUrl: await urlHelper.getDocApiUrl(addon, httpClient)
         };
 
         try {

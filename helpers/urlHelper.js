@@ -1,3 +1,7 @@
+const {
+    getAppProperty
+} = require("./requestHelper.js");
+
 var urlHelper = {};
 
 urlHelper.getFileUrl = function (localBaseUrl, clientKey, pageId, attachmentId) {
@@ -14,6 +18,12 @@ urlHelper.getCallbackUrl = function (localBaseUrl, clientKey, pageId, attachment
     url = url + "&pageId=" + pageId;
     url = url + "&attachmentId=" + attachmentId;
     return url;
+}
+
+urlHelper.getDocApiUrl = async function (addon, httpClient) {
+    const docApiUrl = await getAppProperty(httpClient, "docApiUrl");
+
+    return docApiUrl ? docApiUrl : addon.config.docServer().default.adress;
 }
 
 module.exports = urlHelper;

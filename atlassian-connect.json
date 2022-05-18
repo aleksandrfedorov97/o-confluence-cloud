@@ -71,6 +71,13 @@
                 ],
                 "weight": 10
             }
-        ]
+        ],
+        "configurePage": {
+            "url": "/configure",
+            "name": {
+              "value": "ONLYOFFICE Configuration"
+            },
+            "key": "configure"
+        }
     }
 }
