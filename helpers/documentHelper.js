@@ -69,7 +69,7 @@ documentHelper.isEditable = function (extension) {
 
 documentHelper.getEditorConfig = function (clientKey, localBaseUrl, attachmentInfo, userInfo, permissionEdit) {
 
-    let fileType = documentHelper.getFileExtension(attachmentInfo.title);
+    const fileType = documentHelper.getFileExtension(attachmentInfo.title);
     let mode = "view";
     let callbackUrl = null;
 
