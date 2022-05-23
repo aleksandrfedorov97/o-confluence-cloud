@@ -65,6 +65,7 @@ export default function routes(app, addon) {
         const httpClient = addon.httpClient(req);
         const userAccountId = req.context.userAccountId;
         const localBaseUrl = req.context.localBaseUrl;
+        const hostBaseUrl = req.context.hostBaseUrl;
         const clientKey = req.context.clientKey
         const pageId = req.query.pageId;
         const attachmentId = req.query.attachmentId;
@@ -91,7 +92,7 @@ export default function routes(app, addon) {
                 context.error = `Sorry, this file format is not supported (${fileType})`;
             } else {
                 const permissionEdit = await checkPermissions(httpClient, userAccountId, attachmentId, "update");
-                const editorConfig = documentHelper.getEditorConfig(clientKey, localBaseUrl, attachmentInfo, userInfo, permissionEdit);
+                const editorConfig = documentHelper.getEditorConfig(clientKey, localBaseUrl, hostBaseUrl, attachmentInfo, userInfo, permissionEdit);
 
                 const jwtSecret = await getJwtSecret(addon, httpClient);
 

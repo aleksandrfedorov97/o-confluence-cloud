@@ -67,7 +67,7 @@ documentHelper.isEditable = function (extension) {
     return SUPPORTED_FORMATS[extension] !== undefined && SUPPORTED_FORMATS[extension]["edit"] === true;
 }
 
-documentHelper.getEditorConfig = function (clientKey, localBaseUrl, attachmentInfo, userInfo, permissionEdit) {
+documentHelper.getEditorConfig = function (clientKey, localBaseUrl, hostBaseUrl, attachmentInfo, userInfo, permissionEdit) {
 
     const fileType = documentHelper.getFileExtension(attachmentInfo.title);
     let mode = "view";
@@ -104,6 +104,11 @@ documentHelper.getEditorConfig = function (clientKey, localBaseUrl, attachmentIn
                 id: userInfo.accountId,
                 name: userInfo.displayName
             },
+            customization: {
+                goback: {
+                    url: urlHelper.getGoBackUrl(hostBaseUrl, attachmentInfo.container.id)
+                }
+            }
         }
     };
 }

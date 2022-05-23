@@ -20,6 +20,12 @@ urlHelper.getCallbackUrl = function (localBaseUrl, clientKey, pageId, attachment
     return url;
 }
 
+urlHelper.getGoBackUrl = function (hostBaseUrl, pageId) {
+    var url = hostBaseUrl + "/pages/viewpageattachments.action";
+    url = url + "?pageId=" + pageId;
+    return url;
+}
+
 urlHelper.getDocApiUrl = async function (addon, httpClient) {
     const docApiUrl = await getAppProperty(httpClient, "docApiUrl");
 
