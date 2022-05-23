@@ -1,14 +1,15 @@
-const axios = require("axios");
+import * as jwt from 'atlassian-jwt';
+
 const documentHelper = require("../helpers/documentHelper.js");
 const urlHelper = require("../helpers/urlHelper.js");
 
 const {
-    getAppProperty,
     setAppProperty,
     getAttachmentInfo,
     getUserInfo,
     checkPermissions,
     updateContent,
+    getUriDownloadAttachment,
     getFileDataFromUrl
 } = require("../helpers/requestHelper.js");
 
@@ -92,6 +93,12 @@ export default function routes(app, addon) {
                 const permissionEdit = await checkPermissions(httpClient, userAccountId, attachmentId, "update");
                 const editorConfig = documentHelper.getEditorConfig(clientKey, localBaseUrl, attachmentInfo, userInfo, permissionEdit);
 
+                const jwtSecret = await getJwtSecret(addon, httpClient);
+
+                if (jwtSecret) {
+                    editorConfig.token = jwt.encodeSymmetric(editorConfig, jwtSecret);
+                }
+
                 context.editorConfig = JSON.stringify(editorConfig);
             }
         } catch (error) {
@@ -105,50 +112,98 @@ export default function routes(app, addon) {
         );
     });
 
-    app.get('/onlyoffice-download', (req, res) => {
+    app.get('/onlyoffice-download', async (req, res) => {
 
-      var httpClient = addon.httpClient({
-        clientKey: req.query.clientKey
-      });
+        var httpClient = addon.httpClient({
+            clientKey: req.query.clientKey
+        });
 
-      httpClient.get({
-        url: `/rest/api/content/${req.query.pageId}/child/attachment/${req.query.attachmentId}/download`
-      }, function(err, response, body) {
-        res.statusCode = 302;		
-        res.setHeader("location", response.request.uri.href);
-        res.send(body);
+        const jwtSecret = await getJwtSecret(addon, httpClient);
 
-        // var Readable = require('stream').Readable
-        // var s = new Readable();
-        // s.push(body);    
-        // s.push(null); 
-        // res.setHeader("Content-Length", 11435);
-        // res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-        // res.setHeader("Content-Disposition", "attachment; filename*=UTF-8\'\'" + "sample.docx");
-        // s.pipe(res);
-      });
+        if (jwtSecret) {
+            const jwtHeader = await getJwtHeader(addon, httpClient);
+            const authHeader = req.headers[jwtHeader.toLowerCase()];
+            const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
+
+            if (!token) {
+                res.status(401).send("Could not find authentication data on request");
+                return;
+            }
+
+            try {
+                var bodyFromToken = jwt.decodeSymmetric(token, jwtSecret, jwt.SymmetricAlgorithm.HS256);
+            } catch (error) {
+                res.status(401).send(`Invalid JWT: ${error.message}`);
+                return;
+            }
+        }
+
+        const pageId = req.query.pageId;
+        const attachmentId = req.query.attachmentId;
+
+        if (!pageId || !attachmentId) {
+            res.status(400).send();
+            return;
+        }
+
+        const uri = await getUriDownloadAttachment(httpClient, pageId, attachmentId);
+
+        res.setHeader("location", uri);
+        res.status(302).send();
     });
 
     app.post('/onlyoffice-callback', async (req, res) => {
 
-        const body = req.body;
+        let body = req.body;
+
+        if (!body) {
+            res.status(400).send();
+            return;
+        }
+
+        const httpClient = addon.httpClient({
+            clientKey: req.query.clientKey
+        });
+
+        const jwtSecret = await getJwtSecret(addon, httpClient);
+
+        if (jwtSecret) {
+            let token = body.token;
+            let tokenFromHeader = false;
+
+            if (!token) {
+                const jwtHeader = await getJwtHeader(addon, httpClient);
+                const authHeader = req.headers[jwtHeader.toLowerCase()];
+                token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
+                tokenFromHeader = true;
+            }
+
+            if (!token) {
+                res.status(401).send("Could not find authentication data on request");
+                return;
+            }
+
+            try {
+                var bodyFromToken = jwt.decodeSymmetric(token, jwtSecret, jwt.SymmetricAlgorithm.HS256);
+
+                body = tokenFromHeader ? bodyFromToken.payload : bodyFromToken;
+            } catch (error) {
+                res.status(401).send(`Invalid JWT: ${error.message}`);
+                return;
+            }
+        }
 
         if (body.status == 1) {
 
         } else if (body.status == 2 || body.status == 3) { // MustSave, Corrupted
-            const httpClient = addon.httpClient({
-                clientKey: req.query.clientKey
-            });
-            
             const userAccountId = body.actions[0].userid;
             const pageId = req.query.pageId;
             const attachmentId = req.query.attachmentId;
                 
             const fileData = await getFileDataFromUrl(body.url);
             const error = await updateContent(httpClient, userAccountId, pageId, attachmentId, fileData);
-        
         } else if (body.status == 6 || body.status == 7) { // MustForceSave, CorruptedForceSave
-
+            res.json({ error: 1, message: "Force save is not supported"});
         }
 
         res.json({ error: 0 });

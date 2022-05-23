@@ -1,3 +1,5 @@
+const axios = require("axios");
+
 function getAppProperty(httpClient, propertyKey) {
     return new Promise((resolve, reject) => {
         httpClient.get({
@@ -128,6 +130,22 @@ function updateContent(httpClient, userAccountId, pageId, attachmentId, fileData
                 reject(err);
                 return;
             }
+            resolve();
+        });
+    });
+}
+
+function getUriDownloadAttachment(httpClient, pageId, attachmentId) {
+    return new Promise((resolve, reject) => {
+        httpClient.get({
+            url: `/rest/api/content/${pageId}/child/attachment/${attachmentId}/download`
+        }, function(err, response, body) {
+            if (err) {
+                reject(err);
+                return;
+            }
+
+            resolve(response.request.uri.href);
         });
     });
 }
@@ -152,5 +170,6 @@ module.exports = {
     getUserInfo,
     checkPermissions,
     updateContent,
+    getUriDownloadAttachment,
     getFileDataFromUrl
 };
